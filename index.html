@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Gato Arcade - Retro Tic Tac Toe</title>
+    <!-- Tailwind CSS para el diseño base -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para iconos retro adicionales -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Estilo Pixel Art (Press Start 2P) y Técnico (Share Tech Mono) -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        retro: ['"Press Start 2P"', 'monospace'],
+                        mono: ['"Share Tech Mono"', 'monospace']
+                    },
+                    colors: {
+                        neonPink: '#ff007f',
+                        neonBlue: '#00f0ff',
+                        neonPurple: '#9d00ff',
+                        retroYellow: '#ffea00',
+                        retroGreen: '#39ff14',
+                        arcadeBg: '#0b001a'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos Retro Personalizados */
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #0b001a;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* Efecto de Brillo de Neón */
+        .neon-border-blue {
+            box-shadow: 0 0 10px #00f0ff, inset 0 0 10px #00f0ff;
+            border: 3px solid #00f0ff;
+        }
+        .neon-border-pink {
+            box-shadow: 0 0 10px #ff007f, inset 0 0 10px #ff007f;
+            border: 3px solid #ff007f;
+        }
+        .neon-border-yellow {
+            box-shadow: 0 0 10px #ffea00, inset 0 0 10px #ffea00;
+            border: 3px solid #ffea00;
+        }
+        .neon-border-purple {
+            box-shadow: 0 0 12px #9d00ff, inset 0 0 5px #9d00ff;
+            border: 3px solid #9d00ff;
+        }
+
+        .neon-text-blue {
+            text-shadow: 0 0 5px #00f0ff, 0 0 10px #00f0ff;
+        }
+        .neon-text-pink {
+            text-shadow: 0 0 5px #ff007f, 0 0 10px #ff007f;
+        }
+        .neon-text-yellow {
+            text-shadow: 0 0 5px #ffea00, 0 0 10px #ffea00;
+        }
+        .neon-text-green {
+            text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
+        }
+
+        /* Filtro de Pantalla CRT retro */
+        .crt-overlay::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            aspect-ratio: auto;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .crt-curve {
+            animation: crt-flicker 0.15s infinite;
+        }
+
+        @keyframes crt-flicker {
+            0% { opacity: 0.985; }
+            50% { opacity: 0.995; }
+            100% { opacity: 0.985; }
+        }
+
+        /* Animaciones para ganar y efectos */
+        @keyframes scale-up {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .scale-in {
+            animation: scale-up 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes retro-pulse {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.05); filter: brightness(1.2); }
+        }
+        .pulse-active {
+            animation: retro-pulse 1s infinite ease-in-out;
+        }
+
+        /* Cuadrícula Synthwave en 3D interactiva */
+        .grid-3d-container {
+            perspective: 300px;
+            overflow: hidden;
+        }
+        .grid-3d {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(157, 0, 255, 0.15) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(157, 0, 255, 0.15) 1px, transparent 1px);
+            transform: rotateX(60deg);
+            transform-origin: top center;
+            animation: grid-scroll 20s linear infinite;
+        }
+        @keyframes grid-scroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 800px; }
+        }
+
+        /* Scrollbar Retro */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b001a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9d00ff;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff007f;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white relative">
+
+    <!-- Contenedor de Fondos Dinámicos -->
+    <div id="bg-container" class="absolute inset-0 w-full h-full -z-10 overflow-hidden">
+        <!-- Canvas para partículas o lluvia tipo matrix -->
+        <canvas id="bg-canvas" class="absolute inset-0 w-full h-full"></canvas>
+        <!-- Rejilla Synthwave -->
+        <div id="synthwave-grid" class="absolute bottom-0 left-0 w-full h-[150%] grid-3d-container hidden pointer-events-none">
+            <div class="grid-3d w-full h-[200%]"></div>
+        </div>
+    </div>
+
+    <!-- Efecto CRT global toggleable -->
+    <div id="crt-layer" class="crt-overlay crt-curve absolute inset-0 pointer-events-none z-50"></div>
+
+    <!-- Main Wrapper -->
+    <div class="min-h-screen flex flex-col justify-between items-center px-4 py-6 relative z-10">
+        
+        <!-- Header / HUD -->
+        <header class="w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-neonPink border-2 border-retroYellow flex items-center justify-center neon-border-pink">
+                    <span class="pixel-font text-xl text-retroYellow">🎮</span>
+                </div>
+                <div>
+                    <h1 class="pixel-font text-lg md:text-xl text-neonPink neon-text-pink leading-none">RETRO GATO</h1>
+                    <p class="text-xs text-neonBlue uppercase tracking-widest mt-1 font-retro">Insert Coin to Play</p>
+                </div>
+            </div>
+
+            <!-- Botones de Control de Preferencias -->
+            <div class="flex items-center gap-2">
+                <!-- Sonido -->
+                <button id="btn-sound" class="w-10 h-10 flex items-center justify-center rounded border border-neonBlue bg-black/50 text-neonBlue hover:bg-neonBlue hover:text-black transition-all" title="Activar/Desactivar Sonido">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <!-- Filtro CRT -->
+                <button id="btn-crt" class="w-10 h-10 flex items-center justify-center rounded border border-retroYellow bg-black/50 text-retroYellow hover:bg-retroYellow hover:text-black transition-all" title="Toggle Filtro CRT">
+                    <span class="font-retro text-[9px] font-bold">CRT</span>
+                </button>
+                <!-- Reiniciar Marcador -->
+                <button id="btn-reset-scores" class="px-3 h-10 flex items-center gap-2 rounded border border-neonPink bg-black/50 text-neonPink hover:bg-neonPink hover:text-black transition-all font-retro text-[10px]" title="Reiniciar Score">
+                    <i class="fas fa-rotate"></i>
+                    <span class="hidden md:inline">REINICIAR</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Tablero de Contenido Principal -->
+        <main class="w-full max-w-5xl flex flex-col lg:flex-row gap-6 items-stretch justify-center my-auto">
+            
+            <!-- Panel Izquierdo: Configuración del juego -->
+            <section class="lg:w-1/3 bg-black/75 rounded-xl neon-border-purple p-5 flex flex-col justify-between gap-4 backdrop-blur-sm">
+                <div>
+                    <h2 class="pixel-font text-xs text-retroYellow mb-4 border-b border-purple-900 pb-2 flex items-center gap-2">
+                        <span>⚙️</span> CONFIGURAR JUEGO
+                    </h2>
+
+                    <!-- Modo de Juego -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-retro text-neonBlue mb-2">MODO DE JUEGO</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="mode-cpu" class="py-2 px-1 text-center font-retro text-[10px] rounded border border-neonBlue bg-neonBlue/20 text-white hover:bg-neonBlue/40 active:scale-95 transition-all flex flex-col items-center gap-1">
+                                <span>🤖</span> vs CPU
+                            </button>
+                            <button id="mode-p2" class="py-2 px-1 text-center font-retro text-[10px] rounded border border-neonPink bg-transparent text-gray-400 hover:bg-neonPink/20 hover:text-white active:scale-95 transition-all flex flex-col items-center gap-1">
+                                <span>👥</span> LOCAL p2
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dificultad CPU (Ocultable si es P2) -->
+                    <div id="cpu-diff-container" class="mb-4 transition-all duration-300">
+                        <label class="block text-xs font-retro text-retroYellow mb-2">DIFICULTAD CPU</label>
+                        <div class="grid grid-cols-3 gap-1">
+                            <button data-diff="easy" class="py-1 px-1 font-retro text-[8px] text-center border border-retroGreen bg-retroGreen/20 rounded hover:bg-retroGreen/40 text-white transition-all">FÁCIL</button>
+                            <button data-diff="medium" class="py-1 px-1 font-retro text-[8px] text-center border border-retroYellow bg-transparent rounded hover:bg-retroYellow/20 text-gray-400 transition-all">MEDIA</button>
+                            <button data-diff="hard" class="py-1 px-1 font-retro text-[8px] text-center border border-neonPink bg-transparent rounded hover:bg-neonPink/20 text-gray-400 transition-all">IMPOSIBLE</button>
+                        </div>
+                    </div>
+
+                    <!-- Selección de Aspectos (Skins) -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-retro text-neonPink mb-2">ELEGIR ASPECTO (SKINS)</label>
+                        <div class="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1" id="skins-list">
+                            <!-- Skins se inyectan por JS -->
+                        </div>
+                    </div>
+
+                    <!-- Selección de Fondos -->
+                    <div>
+                        <label class="block text-xs font-retro text-retroGreen mb-2">FONDO ARCADE</label>
+                        <div class="grid grid-cols-2 gap-2" id="bg-list">
+                            <!-- Fondos se inyectan por JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer del Panel -->
+                <div class="mt-4 border-t border-purple-900 pt-3 flex justify-between items-center text-[10px] font-retro text-purple-400">
+                    <span>STATUS: READY</span>
+                    <span class="blink-fast neon-text-green text-retroGreen">ONLINE</span>
+                </div>
+            </section>
+
+            <!-- Panel Central: Tablero del Juego -->
+            <section class="lg:w-2/5 flex flex-col justify-between items-center gap-4">
+                <!-- Marcador Superior en el Tablero -->
+                <div class="w-full flex items-center justify-around bg-black/85 rounded-lg neon-border-blue py-3 px-2">
+                    <!-- Jugador 1 -->
+                    <div class="text-center">
+                        <p class="font-retro text-[9px] text-neonBlue mb-1" id="p1-label">JUGADOR 1</p>
+                        <p class="pixel-font text-lg text-white" id="score-p1">0</p>
+                        <span id="skin-p1-preview" class="text-xs bg-neonBlue/20 px-2 py-0.5 rounded text-neonBlue inline-block mt-1 font-retro">❌</span>
+                    </div>
+
+                    <!-- Empates -->
+                    <div class="text-center px-3 border-x border-purple-900">
+                        <p class="font-retro text-[9px] text-retroYellow mb-1">EMPATES</p>
+                        <p class="pixel-font text-lg text-white" id="score-ties">0</p>
+                        <span class="text-xs bg-retroYellow/20 px-2 py-0.5 rounded text-retroYellow inline-block mt-1 font-retro">⚡</span>
+                    </div>
+
+                    <!-- Jugador 2 / CPU -->
+                    <div class="text-center">
+                        <p class="font-retro text-[9px] text-neonPink mb-1" id="p2-label">CPU (FÁCIL)</p>
+                        <p class="pixel-font text-lg text-white" id="score-p2">0</p>
+                        <span id="skin-p2-preview" class="text-xs bg-neonPink/20 px-2 py-0.5 rounded text-neonPink inline-block mt-1 font-retro">⭕</span>
+                    </div>
+                </div>
+
+                <!-- Tablero de Juego Principal -->
+                <div class="relative w-full aspect-square bg-black/95 rounded-2xl neon-border-pink p-4 flex items-center justify-center overflow-hidden">
+                    <!-- Detalle Estético Retro de Fondo de Tablero -->
+                    <div class="absolute inset-0 bg-radial-gradient from-transparent to-black/80 pointer-events-none"></div>
+                    
+                    <!-- Rejilla Interactiva -->
+                    <div class="grid grid-cols-3 grid-rows-3 gap-3 w-full h-full relative z-10" id="board-grid">
+                        <!-- Celdas creadas dinámicamente -->
+                        <div data-index="0" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="1" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="2" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="3" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="4" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="5" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="6" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="7" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                        <div data-index="8" class="game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none"></div>
+                    </div>
+                </div>
+
+                <!-- Indicador de Turno -->
+                <div class="w-full bg-black/60 rounded border border-purple-800 py-2 px-4 text-center font-retro text-[10px] text-neonBlue" id="turn-banner">
+                    TURNO: JUGADOR 1 (X)
+                </div>
+            </section>
+
+            <!-- Panel Derecho: Logros Retro / Instrucciones -->
+            <section class="lg:w-1/4 bg-black/75 rounded-xl neon-border-purple p-5 flex flex-col justify-between gap-4 backdrop-blur-sm">
+                <div>
+                    <h2 class="pixel-font text-xs text-neonPink mb-4 border-b border-purple-900 pb-2 flex items-center gap-2">
+                        <span>🏆</span> INSTRUCCIONES
+                    </h2>
+                    
+                    <div class="space-y-4 text-xs font-mono text-gray-300">
+                        <div class="flex items-start gap-2">
+                            <span class="text-retroYellow">⚡</span>
+                            <p><strong class="text-white">COSMOS:</strong> Domina la cuadrícula de 3x3 alineando tres de tus figuras de manera horizontal, vertical o diagonal.</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-neonBlue">🤖</span>
+                            <p><strong class="text-white">CPU INTELIGENTE:</strong> Entrena tu mente contra la IA Imposible. ¡Usa el algoritmo clásico de arcade!</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-neonPink">🌈</span>
+                            <p><strong class="text-white">SKINS DE PODER:</strong> Intercambia aspectos dinámicos de forma instantánea sin interrumpir tu puntuación acumulada.</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-retroGreen">🎶</span>
+                            <p><strong class="text-white">SINTETIZADOR:</strong> Activa el sonido para deleitarte con efectos clásicos estilo retro sintetizados por Web Audio.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cabina Arcade Mini-Widget -->
+                <div class="border border-purple-900 bg-purple-950/20 p-3 rounded-lg text-center">
+                    <p class="pixel-font text-[9px] text-retroYellow blink-fast mb-2">★ ARCADE SYSTEM ★</p>
+                    <div class="flex justify-center gap-3 text-lg">
+                        <i class="fas fa-gamepad text-neonBlue"></i>
+                        <i class="fas fa-ghost text-neonPink animate-bounce"></i>
+                        <i class="fas fa-space-shuttle text-retroYellow"></i>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Overlay de Juego Terminado / Victoria / Empate -->
+        <div id="game-over-modal" class="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-40 hidden backdrop-blur-sm">
+            <div class="bg-black border-4 border-neonPink rounded-2xl p-8 max-w-sm w-full text-center neon-border-pink relative scale-in">
+                <!-- Estética Retro Grid de Fondo de Ventana -->
+                <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-neonPink border-2 border-white rounded px-4 py-1 pixel-font text-[10px] text-black">
+                    FIN DE JUEGO
+                </div>
+
+                <p id="game-over-title" class="pixel-font text-xl text-retroYellow neon-text-yellow mb-2 mt-4">¡VICTORIA!</p>
+                <p id="game-over-subtitle" class="text-lg font-mono text-white mb-6">El Jugador 1 domina la galaxia</p>
+
+                <!-- Icono de Representación de Victoria -->
+                <div class="w-24 h-24 mx-auto mb-6 bg-purple-950/40 border border-purple-800 rounded-full flex items-center justify-center text-5xl animate-bounce" id="game-over-icon">
+                    👾
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="space-y-3">
+                    <button id="btn-next-round" class="w-full py-3 px-4 font-retro text-xs text-black bg-retroGreen rounded border-2 border-white hover:bg-green-400 active:scale-95 transition-all neon-text-green">
+                        Siguiente Ronda
+                    </button>
+                    <button id="btn-close-modal" class="w-full py-2 px-4 font-retro text-[10px] text-neonBlue bg-transparent border border-neonBlue rounded hover:bg-neonBlue/20 active:scale-95 transition-all">
+                        Cerrar Menú
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Créditos y Controles Inferiores -->
+        <footer class="w-full max-w-4xl mt-4 text-center">
+            <p class="font-retro text-[8px] text-purple-400 tracking-widest">
+                RETRO ARCADE 198X • POWERED BY GOOGLE GEMINI • FECHA: 2026
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * SINTETIZADOR DE AUDIO RETRO DE 8 BITS (Sintetizado en vivo)
+         */
+        const RetroAudio = {
+            ctx: null,
+            enabled: true,
+
+            init() {
+                // Se inicializa al primer interacción del usuario para cumplir con las políticas de navegadores
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+
+            playClick() {
+                if (!this.enabled) return;
+                this.init();
+                const ctx = this.ctx;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
+            },
+
+            playX() {
+                if (!this.enabled) return;
+                this.init();
+                const ctx = this.ctx;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            },
+
+            playO() {
+                if (!this.enabled) return;
+                this.init();
+                const ctx = this.ctx;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            },
+
+            playWin() {
+                if (!this.enabled) return;
+                this.init();
+                const ctx = this.ctx;
+                const now = ctx.currentTime;
+                
+                const playNote = (freq, delay, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(freq, now + delay);
+                    gain.gain.setValueAtTime(0.1, now + delay);
+                    gain.gain.linearRampToValueAtTime(0.01, now + delay + duration - 0.02);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + delay);
+                    osc.stop(now + delay + duration);
+                };
+
+                // Fanfarria Retro de 4 notas alegres
+                playNote(261.63, 0.0, 0.12); // C4
+                playNote(329.63, 0.12, 0.12); // E4
+                playNote(392.00, 0.24, 0.12); // G4
+                playNote(523.25, 0.36, 0.35); // C5
+            },
+
+            playTie() {
+                if (!this.enabled) return;
+                this.init();
+                const ctx = this.ctx;
+                const now = ctx.currentTime;
+
+                const playNote = (freq, delay, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + delay);
+                    gain.gain.setValueAtTime(0.1, now + delay);
+                    gain.gain.linearRampToValueAtTime(0.01, now + delay + duration - 0.02);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + delay);
+                    osc.stop(now + delay + duration);
+                };
+
+                // Notas descendentes tristes
+                playNote(196.00, 0.0, 0.15); // G3
+                playNote(164.81, 0.15, 0.15); // E3
+                playNote(130.81, 0.3, 0.4); // C3
+            }
+        };
+
+        /**
+         * CONFIGURACIÓN DE ASPECTOS (SKINS) Y FONDOS
+         */
+        const Skins = [
+            { id: 'classic', name: 'Clásicos', p1: '❌', p2: '⭕', colorP1: 'text-neonBlue neon-text-blue', colorP2: 'text-neonPink neon-text-pink' },
+            { id: 'arcade', name: 'Alien vs UFO', p1: '👾', p2: '🛸', colorP1: 'text-retroGreen neon-text-green', colorP2: 'text-retroYellow neon-text-yellow' },
+            { id: 'retro', name: 'Come Cocos', p1: '🍕', p2: '👻', colorP1: 'text-retroYellow neon-text-yellow', colorP2: 'text-neonPink neon-text-pink' },
+            { id: 'fantasy', name: 'Caballero', p1: '⚔️', p2: '🛡️', colorP1: 'text-cyan-400', colorP2: 'text-amber-500' },
+            { id: 'elements', name: 'Fuego & Hielo', p1: '🔥', p2: '❄️', colorP1: 'text-orange-500', colorP2: 'text-blue-300' },
+            { id: 'cyber', name: '⚡ Cyberspace 🌀', p1: '⚡', p2: '🌀', colorP1: 'text-yellow-400', colorP2: 'text-purple-400' }
+        ];
+
+        const Backgrounds = [
+            { id: 'grid', name: 'Retro Grid 🌌', desc: 'Cuadrícula retro-futurista' },
+            { id: 'stars', name: 'Estelar ✨', desc: 'Campo de estrellas pixel' },
+            { id: 'matrix', name: 'Digital Rain 📟', desc: 'Matrix retro hacker' },
+            { id: 'glow', name: 'Neon Wave 🌅', desc: 'Atardecer neón' }
+        ];
+
+        /**
+         * VARIABLES DE ESTADO DEL JUEGO
+         */
+        let currentMode = 'cpu'; // 'cpu' o 'p2'
+        let cpuDifficulty = 'easy'; // 'easy', 'medium', 'hard' (minimax)
+        let activeSkinIndex = 0;
+        let activeBgId = 'grid';
+        let isCRTOn = true;
+
+        // Estado del Tablero
+        let board = Array(9).fill(null); // 'X' o 'O' o null
+        let currentPlayer = 'X'; // X siempre inicia primero
+        let isGameActive = true;
+        let scores = {
+            p1: 0,
+            p2: 0,
+            ties: 0
+        };
+
+        // Instancias de renderizado de fondo
+        let canvas, ctx;
+        let animationId;
+        let stars = [];
+        let matrixColumns = [];
+
+        /**
+         * MANEJADOR DE FONDOS INTERACTIVOS (CANVAS & CSS)
+         */
+        function initBackground() {
+            canvas = document.getElementById('bg-canvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                setupBgData();
+            });
+
+            setupBgData();
+            animateBackground();
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function setupBgData() {
+            // Limpiar datos anteriores
+            stars = [];
+            matrixColumns = [];
+
+            // 1. Configurar Estrellas
+            const starCount = Math.floor((canvas.width * canvas.height) / 8000);
+            for (let i = 0; i < starCount; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speed: Math.random() * 0.5 + 0.1,
+                    color: i % 2 === 0 ? '#ff007f' : '#00f0ff'
+                });
+            }
+
+            // 2. Configurar Matrix Lluvia Digital
+            const fontSize = 14;
+            const columns = Math.floor(canvas.width / fontSize);
+            for (let i = 0; i < columns; i++) {
+                matrixColumns.push({
+                    x: i * fontSize,
+                    y: Math.random() * -canvas.height,
+                    speed: Math.random() * 2 + 2,
+                    chars: []
+                });
+            }
+        }
+
+        function animateBackground() {
+            // Cancelar animaciones anteriores
+            if (animationId) cancelAnimationFrame(animationId);
+
+            function render() {
+                if (activeBgId === 'grid') {
+                    // Synthwave Grid usa CSS e imágenes. Limpiamos canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    // Efecto de gradiente radial
+                    const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 50, canvas.width/2, canvas.height/2, canvas.width);
+                    gradient.addColorStop(0, '#100028');
+                    gradient.addColorStop(1, '#050010');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } 
+                else if (activeBgId === 'stars') {
+                    ctx.fillStyle = 'rgba(11, 0, 26, 0.3)'; // Sutil estela
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Dibujar estrellas moviéndose lentamente
+                    stars.forEach(star => {
+                        ctx.fillStyle = star.color;
+                        ctx.fillRect(star.x, star.y, star.size, star.size);
+                        
+                        // Actualizar posición
+                        star.y += star.speed;
+                        if (star.y > canvas.height) {
+                            star.y = 0;
+                            star.x = Math.random() * canvas.width;
+                        }
+                    });
+                } 
+                else if (activeBgId === 'matrix') {
+                    ctx.fillStyle = 'rgba(11, 0, 26, 0.15)'; // Estela pesada
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.fillStyle = '#39ff14';
+                    ctx.font = '14px monospace';
+
+                    matrixColumns.forEach(col => {
+                        const char = String.fromCharCode(0x30A0 + Math.random() * 96); // Caracteres Katakana Retro
+                        ctx.fillText(char, col.x, col.y);
+
+                        col.y += col.speed;
+                        if (col.y > canvas.height) {
+                            col.y = Math.random() * -100;
+                            col.speed = Math.random() * 2 + 2;
+                        }
+                    });
+                } 
+                else if (activeBgId === 'glow') {
+                    // Sunset retro radial
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                    gradient.addColorStop(0, '#ff007f');
+                    gradient.addColorStop(0.4, '#7a00ff');
+                    gradient.addColorStop(1, '#0b001a');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Sol retro gigante en el centro-bajo
+                    const solY = canvas.height * 0.65;
+                    const solRadius = Math.min(canvas.width, canvas.height) * 0.25;
+                    
+                    const solGrad = ctx.createLinearGradient(0, solY - solRadius, 0, solY + solRadius);
+                    solGrad.addColorStop(0, '#ffea00');
+                    solGrad.addColorStop(1, '#ff007f');
+                    
+                    ctx.beginPath();
+                    ctx.arc(canvas.width / 2, solY, solRadius, 0, Math.PI, true);
+                    ctx.fillStyle = solGrad;
+                    ctx.fill();
+
+                    // Líneas retro horizontales cortando el sol
+                    ctx.strokeStyle = '#0b001a';
+                    ctx.lineWidth = 6;
+                    for (let i = solY - solRadius; i < solY; i += 18) {
+                        ctx.beginPath();
+                        ctx.moveTo(canvas.width / 2 - solRadius - 10, i);
+                        ctx.lineTo(canvas.width / 2 + solRadius + 10, i);
+                        ctx.stroke();
+                    }
+                }
+
+                animationId = requestAnimationFrame(render);
+            }
+            render();
+        }
+
+        function setBg(bgId) {
+            activeBgId = bgId;
+            const gridEl = document.getElementById('synthwave-grid');
+            if (bgId === 'grid') {
+                gridEl.classList.remove('hidden');
+            } else {
+                gridEl.classList.add('hidden');
+            }
+            setupBgData();
+        }
+
+        /**
+         * LÓGICA DE LA CPU (ALGORITMO MINIMAX Y NIVELES)
+         */
+        function getBestMove() {
+            if (cpuDifficulty === 'easy') {
+                // Movimiento completamente aleatorio
+                return getRandomMove();
+            } else if (cpuDifficulty === 'medium') {
+                // 50% de probabilidad de tomar la mejor opción, 50% aleatoria
+                if (Math.random() < 0.5) {
+                    return getMinimaxMove();
+                } else {
+                    return getRandomMove();
+                }
+            } else {
+                // CPU Imposible: Siempre usa Minimax
+                return getMinimaxMove();
+            }
+        }
+
+        function getRandomMove() {
+            const available = board.map((val, i) => val === null ? i : null).filter(val => val !== null);
+            if (available.length === 0) return null;
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function getMinimaxMove() {
+            let bestScore = -Infinity;
+            let move = null;
+
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === null) {
+                    board[i] = 'O'; // CPU es O
+                    let score = minimax(board, 0, false);
+                    board[i] = null; // Revertir movimiento
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        move = i;
+                    }
+                }
+            }
+            return move;
+        }
+
+        // Tabla de puntuaciones para el Minimax
+        const scoresMinimax = {
+            O: 10,  // Gana la CPU
+            X: -10, // Gana el Jugador
+            tie: 0
+        };
+
+        function checkWinningForMinimax(tempBoard) {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontales
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Verticales
+                [0, 4, 8], [2, 4, 6]             // Diagonales
+            ];
+
+            for (let pattern of winPatterns) {
+                const [a, b, c] = pattern;
+                if (tempBoard[a] && tempBoard[a] === tempBoard[b] && tempBoard[a] === tempBoard[c]) {
+                    return tempBoard[a];
+                }
+            }
+
+            if (tempBoard.every(cell => cell !== null)) {
+                return 'tie';
+            }
+
+            return null;
+        }
+
+        function minimax(tempBoard, depth, isMaximizing) {
+            let result = checkWinningForMinimax(tempBoard);
+            if (result !== null) {
+                return scoresMinimax[result];
+            }
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === null) {
+                        tempBoard[i] = 'O';
+                        let score = minimax(tempBoard, depth + 1, false);
+                        tempBoard[i] = null;
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === null) {
+                        tempBoard[i] = 'X';
+                        let score = minimax(tempBoard, depth + 1, true);
+                        tempBoard[i] = null;
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        /**
+         * CONTROL DE INTERACCIÓN Y REGLAS DEL JUEGO
+         */
+        function checkWinner() {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontales
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Verticales
+                [0, 4, 8], [2, 4, 6]             // Diagonales
+            ];
+
+            for (let pattern of winPatterns) {
+                const [a, b, c] = pattern;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return { winner: board[a], pattern };
+                }
+            }
+
+            if (board.every(cell => cell !== null)) {
+                return { winner: 'tie', pattern: [] };
+            }
+
+            return null;
+        }
+
+        function handleCellClick(index) {
+            if (!isGameActive || board[index] !== null) return;
+
+            // Prevenir jugada de CPU si es su turno
+            if (currentMode === 'cpu' && currentPlayer === 'O') return;
+
+            makeMove(index);
+
+            // Si es contra CPU y sigue el juego, la CPU hace su jugada
+            if (isGameActive && currentMode === 'cpu' && currentPlayer === 'O') {
+                setTimeout(() => {
+                    const cpuMove = getBestMove();
+                    if (cpuMove !== null) {
+                        makeMove(cpuMove);
+                    }
+                }, 500); // Pequeña pausa dramática para la CPU
+            }
+        }
+
+        function makeMove(index) {
+            board[index] = currentPlayer;
+            
+            // Sintetizar sonido según ficha colocada
+            if (currentPlayer === 'X') {
+                RetroAudio.playX();
+            } else {
+                RetroAudio.playO();
+            }
+
+            updateBoardUI();
+
+            const result = checkWinner();
+            if (result) {
+                handleGameOver(result);
+            } else {
+                // Cambiar Turno
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateTurnBanner();
+            }
+        }
+
+        function handleGameOver(result) {
+            isGameActive = false;
+            
+            const skin = Skins[activeSkinIndex];
+            const p1Icon = skin.p1;
+            const p2Icon = skin.p2;
+
+            const modal = document.getElementById('game-over-modal');
+            const titleEl = document.getElementById('game-over-title');
+            const subtitleEl = document.getElementById('game-over-subtitle');
+            const iconEl = document.getElementById('game-over-icon');
+
+            if (result.winner === 'tie') {
+                scores.ties++;
+                RetroAudio.playTie();
+                titleEl.textContent = '¡EMPATE!';
+                titleEl.className = 'pixel-font text-xl text-retroYellow neon-text-yellow mb-2 mt-4';
+                subtitleEl.textContent = 'Ninguno logró dominar el tablero.';
+                iconEl.textContent = '👾';
+                iconEl.className = 'w-24 h-24 mx-auto mb-6 bg-purple-950/40 border border-purple-800 rounded-full flex items-center justify-center text-5xl';
+            } else {
+                // Marcar Celdas Ganadoras
+                highlightWinningCells(result.pattern);
+
+                if (result.winner === 'X') {
+                    scores.p1++;
+                    RetroAudio.playWin();
+                    titleEl.textContent = '¡VICTORIA P1!';
+                    titleEl.className = 'pixel-font text-xl text-neonBlue neon-text-blue mb-2 mt-4';
+                    subtitleEl.textContent = `¡El Jugador 1 (${p1Icon}) se consagra campeón!`;
+                    iconEl.textContent = p1Icon;
+                } else {
+                    scores.p2++;
+                    // Si el ganador es CPU o Jugador 2
+                    if (currentMode === 'cpu') {
+                        RetroAudio.playTie(); // Sonido triste por perder contra CPU
+                        titleEl.textContent = 'GAME OVER';
+                        titleEl.className = 'pixel-font text-xl text-neonPink neon-text-pink mb-2 mt-4';
+                        subtitleEl.textContent = `La CPU te ha derrotado con estilo.`;
+                    } else {
+                        RetroAudio.playWin();
+                        titleEl.textContent = '¡VICTORIA P2!';
+                        titleEl.className = 'pixel-font text-xl text-neonPink neon-text-pink mb-2 mt-4';
+                        subtitleEl.textContent = `¡El Jugador 2 (${p2Icon}) se lleva la victoria!`;
+                    }
+                    iconEl.textContent = p2Icon;
+                }
+            }
+
+            // Actualizar Marcador en Pantalla
+            document.getElementById('score-p1').textContent = scores.p1;
+            document.getElementById('score-p2').textContent = scores.p2;
+            document.getElementById('score-ties').textContent = scores.ties;
+
+            // Retrasar apertura del modal un poco para ver la jugada final
+            setTimeout(() => {
+                modal.classList.remove('hidden');
+            }, 800);
+        }
+
+        function highlightWinningCells(pattern) {
+            const cells = document.querySelectorAll('.game-cell');
+            pattern.forEach(index => {
+                const cell = cells[index];
+                cell.classList.add('pulse-active', 'neon-border-yellow', 'bg-yellow-900/40');
+            });
+        }
+
+        function resetBoard() {
+            board = Array(9).fill(null);
+            currentPlayer = 'X';
+            isGameActive = true;
+            
+            // Cerrar modal
+            document.getElementById('game-over-modal').classList.add('hidden');
+
+            // Limpiar celdas en la interfaz
+            const cells = document.querySelectorAll('.game-cell');
+            cells.forEach(cell => {
+                cell.className = 'game-cell flex items-center justify-center bg-purple-950/25 border-2 border-purple-900 rounded-xl hover:bg-purple-900/30 cursor-pointer transition-all duration-150 text-4xl select-none';
+                cell.innerHTML = '';
+            });
+
+            updateTurnBanner();
+        }
+
+        /**
+         * COMPONENTES DE INTERFAZ DINÁMICOS
+         */
+        function updateBoardUI() {
+            const cells = document.querySelectorAll('.game-cell');
+            const skin = Skins[activeSkinIndex];
+
+            cells.forEach((cell, index) => {
+                const cellVal = board[index];
+                if (cellVal !== null) {
+                    if (cell.innerHTML === '') {
+                        // Inyectar el icono con animación y color correspondiente
+                        const isX = cellVal === 'X';
+                        const iconHtml = `<span class="scale-in inline-block ${isX ? skin.colorP1 : skin.colorP2}">${isX ? skin.p1 : skin.p2}</span>`;
+                        cell.innerHTML = iconHtml;
+                        cell.classList.remove('hover:bg-purple-900/30', 'cursor-pointer');
+                    }
+                }
+            });
+        }
+
+        function updateTurnBanner() {
+            const banner = document.getElementById('turn-banner');
+            const skin = Skins[activeSkinIndex];
+            
+            if (currentPlayer === 'X') {
+                banner.innerHTML = `TURNO: <span class="${skin.colorP1}">JUGADOR 1 (${skin.p1})</span>`;
+                banner.className = "w-full bg-black/60 rounded border border-neonBlue/40 py-2 px-4 text-center font-retro text-[10px] text-neonBlue";
+            } else {
+                const nameP2 = currentMode === 'cpu' ? `CPU (${cpuDifficulty.toUpperCase()})` : 'JUGADOR 2';
+                banner.innerHTML = `TURNO: <span class="${skin.colorP2}">${nameP2} (${skin.p2})</span>`;
+                banner.className = "w-full bg-black/60 rounded border border-neonPink/40 py-2 px-4 text-center font-retro text-[10px] text-neonPink";
+            }
+        }
+
+        // Renderizar Skins en el panel lateral
+        function renderSkinsList() {
+            const container = document.getElementById('skins-list');
+            container.innerHTML = '';
+
+            Skins.forEach((skin, index) => {
+                const isSelected = activeSkinIndex === index;
+                const btn = document.createElement('button');
+                btn.className = `p-2 text-left rounded border transition-all flex flex-col justify-between h-14 ${
+                    isSelected 
+                        ? 'border-retroYellow bg-retroYellow/20 text-white' 
+                        : 'border-purple-900 bg-transparent text-gray-400 hover:bg-purple-950/40 hover:text-white'
+                }`;
+                btn.onclick = () => selectSkin(index);
+
+                btn.innerHTML = `
+                    <span class="text-[9px] font-retro tracking-tighter block leading-tight truncate w-full">${skin.name}</span>
+                    <div class="flex justify-between items-center w-full mt-1">
+                        <span class="text-xs">${skin.p1}</span>
+                        <span class="text-[8px] text-gray-500 font-mono">VS</span>
+                        <span class="text-xs">${skin.p2}</span>
+                    </div>
+                `;
+                container.appendChild(btn);
+            });
+
+            // Actualizar Marcadores e Indicador
+            updateSkinPreviews();
+        }
+
+        function selectSkin(index) {
+            RetroAudio.playClick();
+            activeSkinIndex = index;
+            renderSkinsList();
+            updateBoardUI();
+            updateTurnBanner();
+        }
+
+        function updateSkinPreviews() {
+            const skin = Skins[activeSkinIndex];
+            
+            // Previsualización superior
+            const p1Prev = document.getElementById('skin-p1-preview');
+            const p2Prev = document.getElementById('skin-p2-preview');
+
+            p1Prev.textContent = skin.p1;
+            p1Prev.className = `text-xs px-2 py-0.5 rounded inline-block mt-1 font-retro ${skin.colorP1} bg-black/60 border border-purple-900`;
+
+            p2Prev.textContent = skin.p2;
+            p2Prev.className = `text-xs px-2 py-0.5 rounded inline-block mt-1 font-retro ${skin.colorP2} bg-black/60 border border-purple-900`;
+        }
+
+        // Renderizar Fondos en el panel lateral
+        function renderBgList() {
+            const container = document.getElementById('bg-list');
+            container.innerHTML = '';
+
+            Backgrounds.forEach(bg => {
+                const isSelected = activeBgId === bg.id;
+                const btn = document.createElement('button');
+                btn.className = `p-2 text-center rounded border transition-all h-12 flex flex-col justify-center items-center ${
+                    isSelected 
+                        ? 'border-retroGreen bg-retroGreen/20 text-white' 
+                        : 'border-purple-900 bg-transparent text-gray-400 hover:bg-purple-950/40 hover:text-white'
+                }`;
+                btn.onclick = () => selectBg(bg.id);
+
+                btn.innerHTML = `
+                    <span class="text-[9px] font-retro leading-tight">${bg.name}</span>
+                    <span class="text-[8px] text-gray-500 block leading-none mt-1">${bg.desc}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function selectBg(bgId) {
+            RetroAudio.playClick();
+            setBg(bgId);
+            renderBgList();
+        }
+
+        /**
+         * EVENT LISTENERS E INTERACCIONES DE INTERFAZ
+         */
+        function setupEventListeners() {
+            // Celdas del Tablero
+            const cells = document.querySelectorAll('.game-cell');
+            cells.forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const idx = parseInt(cell.getAttribute('data-index'));
+                    handleCellClick(idx);
+                });
+            });
+
+            // Cambiar Modo de Juego (CPU vs P2)
+            const btnCpu = document.getElementById('mode-cpu');
+            const btnP2 = document.getElementById('mode-p2');
+            const cpuDiffCont = document.getElementById('cpu-diff-container');
+            const p2Label = document.getElementById('p2-label');
+
+            btnCpu.addEventListener('click', () => {
+                if (currentMode === 'cpu') return;
+                RetroAudio.playClick();
+                currentMode = 'cpu';
+                
+                // Actualizar Botones visualmente
+                btnCpu.className = "py-2 px-1 text-center font-retro text-[10px] rounded border border-neonBlue bg-neonBlue/20 text-white hover:bg-neonBlue/40 active:scale-95 transition-all flex flex-col items-center gap-1";
+                btnP2.className = "py-2 px-1 text-center font-retro text-[10px] rounded border border-neonPink bg-transparent text-gray-400 hover:bg-neonPink/20 hover:text-white active:scale-95 transition-all flex flex-col items-center gap-1";
+                
+                // Mostrar dificultad de CPU
+                cpuDiffCont.classList.remove('opacity-0', 'pointer-events-none');
+                cpuDiffCont.style.maxHeight = '100px';
+
+                // Cambiar textos HUD
+                p2Label.textContent = `CPU (${cpuDifficulty.toUpperCase()})`;
+
+                resetScores();
+                resetBoard();
+            });
+
+            btnP2.addEventListener('click', () => {
+                if (currentMode === 'p2') return;
+                RetroAudio.playClick();
+                currentMode = 'p2';
+                
+                // Actualizar Botones visualmente
+                btnP2.className = "py-2 px-1 text-center font-retro text-[10px] rounded border border-neonPink bg-neonPink/20 text-white hover:bg-neonPink/40 active:scale-95 transition-all flex flex-col items-center gap-1";
+                btnCpu.className = "py-2 px-1 text-center font-retro text-[10px] rounded border border-neonBlue bg-transparent text-gray-400 hover:bg-neonBlue/20 hover:text-white active:scale-95 transition-all flex flex-col items-center gap-1";
+                
+                // Ocultar dificultad de CPU
+                cpuDiffCont.classList.add('opacity-0', 'pointer-events-none');
+                cpuDiffCont.style.maxHeight = '0px';
+
+                // Cambiar textos HUD
+                p2Label.textContent = 'JUGADOR 2';
+
+                resetScores();
+                resetBoard();
+            });
+
+            // Botones de Dificultad de CPU
+            const diffButtons = document.querySelectorAll('[data-diff]');
+            diffButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const diff = btn.getAttribute('data-diff');
+                    if (cpuDifficulty === diff) return;
+                    
+                    RetroAudio.playClick();
+                    cpuDifficulty = diff;
+
+                    // Actualizar estado activo en botones de dificultad
+                    diffButtons.forEach(b => {
+                        const bDiff = b.getAttribute('data-diff');
+                        let activeColor = 'border-retroGreen bg-retroGreen/20 text-white';
+                        if (bDiff === 'medium') activeColor = 'border-retroYellow bg-retroYellow/20 text-white';
+                        if (bDiff === 'hard') activeColor = 'border-neonPink bg-neonPink/20 text-white';
+
+                        if (bDiff === cpuDifficulty) {
+                            b.className = `py-1 px-1 font-retro text-[8px] text-center border rounded text-white transition-all ${activeColor}`;
+                        } else {
+                            // Inactivos
+                            let borderCol = 'border-retroGreen';
+                            if (bDiff === 'medium') borderCol = 'border-retroYellow';
+                            if (bDiff === 'hard') borderCol = 'border-neonPink';
+                            b.className = `py-1 px-1 font-retro text-[8px] text-center border ${borderCol} bg-transparent rounded hover:bg-white/5 text-gray-400 transition-all`;
+                        }
+                    });
+
+                    // Actualizar HUD
+                    p2Label.textContent = `CPU (${cpuDifficulty.toUpperCase()})`;
+                    
+                    resetScores();
+                    resetBoard();
+                });
+            });
+
+            // Botones del Modal
+            document.getElementById('btn-next-round').addEventListener('click', () => {
+                RetroAudio.playClick();
+                resetBoard();
+            });
+
+            document.getElementById('btn-close-modal').addEventListener('click', () => {
+                RetroAudio.playClick();
+                document.getElementById('game-over-modal').classList.add('hidden');
+            });
+
+            // Botón Reiniciar Score global
+            document.getElementById('btn-reset-scores').addEventListener('click', () => {
+                RetroAudio.playClick();
+                resetScores();
+                resetBoard();
+            });
+
+            // Sonido Mute Toggle
+            const btnSound = document.getElementById('btn-sound');
+            btnSound.addEventListener('click', () => {
+                RetroAudio.enabled = !RetroAudio.enabled;
+                if (RetroAudio.enabled) {
+                    btnSound.innerHTML = `<i class="fas fa-volume-up"></i>`;
+                    btnSound.className = "w-10 h-10 flex items-center justify-center rounded border border-neonBlue bg-black/50 text-neonBlue hover:bg-neonBlue hover:text-black transition-all";
+                    RetroAudio.playClick();
+                } else {
+                    btnSound.innerHTML = `<i class="fas fa-volume-mute"></i>`;
+                    btnSound.className = "w-10 h-10 flex items-center justify-center rounded border border-gray-600 bg-black/50 text-gray-500 hover:bg-gray-500 hover:text-black transition-all";
+                }
+            });
+
+            // CRT Toggle
+            const btnCRT = document.getElementById('btn-crt');
+            const crtLayer = document.getElementById('crt-layer');
+            btnCRT.addEventListener('click', () => {
+                RetroAudio.playClick();
+                isCRTOn = !isCRTOn;
+                if (isCRTOn) {
+                    crtLayer.classList.remove('hidden');
+                    btnCRT.className = "w-10 h-10 flex items-center justify-center rounded border border-retroYellow bg-black/50 text-retroYellow hover:bg-retroYellow hover:text-black transition-all";
+                } else {
+                    crtLayer.classList.add('hidden');
+                    btnCRT.className = "w-10 h-10 flex items-center justify-center rounded border border-gray-600 bg-black/50 text-gray-500 hover:bg-gray-500 hover:text-black transition-all";
+                }
+            });
+        }
+
+        function resetScores() {
+            scores = { p1: 0, p2: 0, ties: 0 };
+            document.getElementById('score-p1').textContent = '0';
+            document.getElementById('score-p2').textContent = '0';
+            document.getElementById('score-ties').textContent = '0';
+        }
+
+        // Lanzamiento inicial al cargar la página
+        window.onload = function () {
+            // Inicializar Fondo e Interfaces
+            initBackground();
+            setBg('grid'); // Fondo inicial retro Synthwave
+            renderSkinsList();
+            renderBgList();
+            setupEventListeners();
+            resetBoard();
+        };
+    </script>
+</body>
+</html>
